@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+
+  web:
+    image: shureck/forcicd:latest
+    build: .
+    restart: always
+    command: uvicorn main:app --host 0.0.0.0
+    deploy:
+      replicas: 1
+      resources:
+        limits: 
+          cpus: "0.1"
+          memory: 50M
+    ports:
+      - 8180:8000
+
+  db:
+    restart: always
+    image: postgres:11.11
+    # Внешний том(volume) и место где он будет подключен внутри контейнера
+    volumes:
+      - ./db/:/var/lib/postgresql/data/
+    ports:
+      - 5435:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=biji
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus_data/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - 3030:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  prometheus_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./prometheus_data
+  grafana_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./grafana_data
