@@ -1,12 +1,15 @@
 import uvicorn
-from fastapi import FastAPI, File, UploadFile, status, Header, Request, Depends
+from fastapi import FastAPI, File, UploadFile, status, Header, Request, Depends, Response
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import make_asgi_app, Counter, Gauge
+from prometheus_fastapi_instrumentator import Instrumentator
+
 import schema
 import psutil
 import time
 import threading
 import random
+import asyncio
 app = FastAPI()
 
 index_counter = Counter('index_counter', 'Description of counter')
@@ -19,30 +22,32 @@ def collect_metrics():
         memory_percent = psutil.virtual_memory().percent
         cpu_usage.set(cpu_percent)
         memory_usage.set(memory_percent)
-        time.sleep(0.)
+        time.sleep(0.5)
 
 # Запускаем сбор метрик в отдельном потоке
 threading.Thread(target=collect_metrics, daemon=True).start()
 
-metrics_app = make_asgi_app()
-app.mount("/metrics", metrics_app)
+Instrumentator().instrument(app).expose(app)
 
 @app.get("/")
 async def getR():
     index_counter.inc()
-    time.sleep(random.randrange(0, 10)/100)
-    return "lol"
+    await asyncio.sleep(random.randrange(0, 10)/1000)
+    return {"first_root": "one"}
+    # return "lol"
 
 @app.get("/add")    
 async def addUser():
     index_counter.inc()
-    time.sleep(random.randrange(0, 100)/100)
-    # schema.add_new_user("shureck", "keklol","fuck_lol")
-    return "lol"
+    await asyncio.sleep(random.randrange(0, 10)/1000)
+    return {"first_root": "add"}
+    # # schema.add_new_user("shureck", "keklol","fuck_lol")
+    # return "lol"
 
 @app.get("/get")
 async def getUser():
     index_counter.inc()
-    time.sleep(random.randrange(0, 100)/100)
+    await asyncio.sleep(random.randrange(0, 10)/1000)
+    return {"first_root": "get"}
     # t = schema.get_user("shureck")
-    return "t"
+    # return "t"
